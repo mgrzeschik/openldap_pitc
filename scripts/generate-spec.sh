@@ -41,24 +41,41 @@ if grep -q -- '--enable-argon2' "$UPSPEC"; then
 fi
 
 # Prepend preamble, append snippets to %build/%install, add subpackages
-# before %changelog. Fails if an injection point is missing.
+# before %changelog. Snippets go after the last line of the section that is
+# NOT inside an %if block continuing into the next section, so they can't end
+# up inside a conditional that happens to be false. Fails if a point is missing.
 awk -v pre="$TOP/pitc/preamble.inc" -v bld="$TOP/pitc/build-append.inc" \
     -v ins="$TOP/pitc/install-append.inc" -v subp="$TOP/pitc/subpackages.inc" \
     -v tag="$TAG" '
 function dump(f,   l) { while ((getline l < f) > 0) print l; close(f) }
-function leave() {
-  if (sec == "build")   { dump(bld); nb++ }
-  if (sec == "install") { dump(ins); ni++ }
+function flush(   i) {
+  if (sec == "build" || sec == "install") {
+    for (i = 1; i <= safe; i++) print buf[i]
+    dump(sec == "build" ? bld : ins)
+    if (sec == "build") nb++; else ni++
+    for (i = safe + 1; i <= n; i++) print buf[i]
+  }
+  n = 0; safe = 0
 }
-BEGIN { print "# GENERATED from " tag " -- do not edit"; dump(pre); sec = "preamble" }
+BEGIN { print "# GENERATED from " tag " -- do not edit"; dump(pre); sec = "preamble"; depth = 0 }
 /^%(package|description|prep|build|install|check|clean|files|changelog|pre|post|preun|postun|pretrans|posttrans|trigger[a-z]*|filetrigger[a-z]*|transfiletrigger[a-z]*|verifyscript|generate_buildrequires)([[:space:]]|$)/ {
-  leave()
+  flush()
   if ($1 == "%changelog" && !ns) { dump(subp); ns++ }
-  sec = substr($1, 2)
+  sec = substr($1, 2); base = depth
+  if (sec == "build" || sec == "install") { print; next }
 }
-{ print }
+{
+  if ($0 ~ /^%if/)    depth++
+  if ($0 ~ /^%endif/) depth--
+  if (sec == "build" || sec == "install") {
+    buf[++n] = $0
+    if (depth == base && $0 !~ /^[[:space:]]*$/) safe = n
+    next
+  }
+  print
+}
 END {
-  leave()
+  flush()
   if (!ns) { dump(subp); ns++ }
   if (nb != 1 || ni != 1) {
     print "ERROR: injection failed (build=" nb+0 ", install=" ni+0 ")" > "/dev/stderr"
