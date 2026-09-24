@@ -15,10 +15,12 @@
 # requires exactly one .spec file in the package.
 Source9999: openldap.upstream.inc
 
-# argon2 via libargon2 (part of EL9/EL10, no EPEL needed at build or runtime)
-BuildRequires: libargon2-devel
+# argon2 module via the libsodium backend. libsodium comes from EPEL on
+# EL9/EL10: needed in the build chroot (Copr epel-* chroots have it) and on
+# every machine that installs openldap-argon2.
+BuildRequires: libsodium-devel
 # Upstream's own %%configure arguments are appended after these.
-%global _configure ./configure --enable-argon2 --with-argon2=libargon2
+%global _configure ./configure --enable-argon2 --with-argon2=libsodium
 
 # Contrib modules built on top of the main tree (%%define = expanded lazily,
 # after upstream has set %%{version})
