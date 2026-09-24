@@ -1,6 +1,6 @@
 #!/bin/bash
 # Fetch the upstream Rocky dist-git at a tag and lay out everything
-# rpmbuild needs: <workdir>/SOURCES/* (incl. openldap.upstream.spec)
+# rpmbuild needs: <workdir>/SOURCES/* (incl. openldap.upstream.inc)
 # Usage: scripts/prepare-sources.sh <upstream-tag> <workdir>
 set -Eeuo pipefail
 trap 'echo "ERROR: line ${LINENO}: \"${BASH_COMMAND}\" failed" >&2' ERR
@@ -21,7 +21,7 @@ UPSPEC="$OUT/upstream/SPECS/openldap.spec"
 
 # Files tracked in dist-git (patches, configs, ...)
 cp -a "$OUT/upstream/SOURCES/." "$OUT/SOURCES/"
-cp "$UPSPEC" "$OUT/SOURCES/openldap.upstream.spec"
+cp "$UPSPEC" "$OUT/SOURCES/openldap.upstream.inc"
 
 # Tarballs listed in the metadata file: "<hash> SOURCES/<name>"
 for meta in "$OUT"/upstream/.*.metadata; do

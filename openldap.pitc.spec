@@ -9,7 +9,9 @@
 # Our build sorts above the matching stock build: 1.el9 -> 1.el9.pitc
 %global dist %{?dist}.pitc
 
-Source9999: openldap.upstream.spec
+# Deliberately not named *.spec: Copr imports the SRPM into dist-git, which
+# requires exactly one .spec file in the package.
+Source9999: openldap.upstream.inc
 
 # argon2 via libargon2 (part of EL9/EL10, no EPEL needed at build or runtime)
 BuildRequires: libargon2-devel
