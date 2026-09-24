@@ -1,10 +1,12 @@
 # pitc additions on top of the Rocky Linux openldap spec (EL9 + EL10).
 #
 # The upstream spec is shipped inside the SRPM as Source9999 and included at
-# the end of this preamble. Our build/install steps run through rpm's
-# __spec_build_post / __spec_install_post hooks, i.e. after upstream's whole
-# %%build / %%install body -- no text patching of the upstream spec.
-# Works with rpm 4.16 (EL9) and 4.19 (EL10).
+# the end of this preamble. Our build/install steps (pitc_build_post,
+# pitc_install_post) run after upstream's whole %%build / %%install body --
+# no text patching of the upstream spec:
+#   rpm >= 4.20:  native %%build -a / %%install -a (end of file)
+#   rpm <  4.20:  legacy __spec_build_post / __spec_install_post hooks
+# EL9 (rpm 4.16) and EL10 (rpm 4.19) both use the legacy path.
 
 # Our build sorts above the matching stock build: 1.el9 -> 1.el9.pitc
 %global dist %{?dist}.pitc
@@ -52,6 +54,16 @@ for f in argon2 pw-sha2 lastbind; do\
 done\
 %{nil}
 
+# rpm >= 4.20 can append to build scriptlets natively (%%build -a,
+# %%install -a, see end of file). Older rpm (EL9: 4.16, EL10: 4.19) uses the
+# legacy hook macros below. Unknown/old rpm falls back to the legacy path.
+%global pitc_have_append %{lua:
+local v = rpm.expand("%{rpmversion}")
+if v:match("^[0-9]") and rpm.vercmp(v, "4.20") >= 0 then print(1) else print(0) end
+}
+
+%if ! %{pitc_have_append}
+# ---- LEGACY (rpm < 4.20): delete this block once all targets have rpm >= 4.20
 # Hook in front of rpm's own post steps. macrobody captures the raw default
 # body, which is expanded lazily later, so debuginfo, brp-* scripts etc.
 # keep working exactly as on the running rpm version.
@@ -65,6 +77,8 @@ done\
 %define __spec_install_post\
 %{pitc_install_post}\
 %{pitc_orig_install_post}
+# ---- end LEGACY
+%endif
 
 %include %{SOURCE9999}
 
@@ -100,3 +114,13 @@ lastbind overlay (contrib) for the OpenLDAP server.
 
 %files lastbind
 %{_libdir}/openldap/lastbind.so*
+
+%if %{pitc_have_append}
+# ---- rpm >= 4.20: native append. When the LEGACY block above is removed,
+# drop this %%if/%%endif pair and keep the two sections.
+%build -a
+%{pitc_build_post}
+
+%install -a
+%{pitc_install_post}
+%endif

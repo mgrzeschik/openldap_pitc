@@ -21,3 +21,11 @@ UPSTREAM_TAG                pinned upstream tag (one line)
 ## Copr
 SCM package, build method make_srpm, subdirectory and spec empty,
 auto-rebuild on, chroots for EL9 and EL10 enabled, webhook added to the repo.
+
+## Build hooks: native vs. legacy
+`openldap.pitc.spec` runs the contrib build/install after upstream's
+`%build`/`%install` via native `%build -a`/`%install -a` on rpm >= 4.20, and
+via `__spec_build_post`/`__spec_install_post` hooks on older rpm. EL9
+(rpm 4.16) and EL10 (rpm 4.19) both use the legacy path. Once every target
+has rpm >= 4.20, delete the block marked LEGACY and the `%if`/`%endif` around
+the `-a` sections at the end of the spec.
