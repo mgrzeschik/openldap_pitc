@@ -1,0 +1,19 @@
+name: bump-upstream
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    steps:
+      - run: dnf -y install git-core curl
+      - uses: actions/checkout@v4
+      - run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config user.name  "bump-bot"
+          git config user.email "bump-bot@users.noreply.github.com"
+          BRANCH=r10s scripts/bump-upstream.sh
